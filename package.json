@@ -58,6 +58,7 @@
   "dependencies": {
     "coffee-script": "^1.10.0",
     "express": "^4.13.3",
-    "gzippo": "^0.2.0"
+    "compression": "*",
+    "morgan": "^1.6.1"
   }
 }
