@@ -56,9 +56,14 @@
     }
   },
   "dependencies": {
+    "browserify-middleware": "^7.0.0",
     "coffee-script": "^1.10.0",
-    "express": "^4.13.3",
     "compression": "*",
-    "morgan": "^1.6.1"
+    "connect": "^3.4.0",
+    "connect-coffee-script": "^0.2.1",
+    "express": "^4.13.3",
+    "jade": "^1.11.0",
+    "morgan": "^1.6.1",
+    "voxel-engine": "^0.20.2"
   }
 }
