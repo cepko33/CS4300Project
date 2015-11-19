@@ -1,5 +1,5 @@
 (function() {
-  var THREE, _, amplitude, blocks, createGame, createMesh, delta, game, generator, i, length, sound, traveller, voxel;
+  var THREE, _, amplitude, blocks, createGame, createMesh, delta, fft, game, generator, i, length, materials, matter, mode, pd, pulsingHelix, songs, sound, theta, travelDir, traveller, voxel;
 
   createGame = require('voxel-engine');
 
@@ -7,15 +7,35 @@
 
   _ = require('lodash');
 
+  createMesh = function(x, y, z, size, material) {
+    var item, mesh;
+    if (size == null) {
+      size = 1;
+    }
+    if (material == null) {
+      material = "grass_top";
+    }
+    mesh = new THREE.Mesh(new THREE.CubeGeometry(size, size, size), game.materials.material);
+    game.materials.paint(mesh, material);
+    mesh.position.set(x, y, z);
+    item = game.addItem({
+      mesh: mesh,
+      size: 1
+    });
+    return item;
+  };
+
+  materials = ["dirt", "grass_top", "leaves_opaque"];
+
   game = createGame({
     chunkSize: 32,
-    materials: ["dirt"],
+    materials: materials,
     materialFlatColor: false
   });
 
   THREE = game.THREE;
 
-  game.paused = false;
+  game.paused = true;
 
   game.appendTo(document.body);
 
@@ -29,35 +49,24 @@
 
   window.game = game;
 
-  sound = new p5.SoundFile("lone.mp3", function(file) {
-    return file.play();
+  songs = ["casin.mp3", "ecozones.mp3", "lone.mp3"];
+
+  sound = new p5.SoundFile(songs[1], function(file) {
+    file.play();
+    return game.paused = false;
   });
 
   amplitude = new p5.Amplitude();
 
-  window.sound = sound;
+  fft = new p5.FFT();
 
-  createMesh = function(x, y, z, size, material) {
-    var item, mesh;
-    if (size == null) {
-      size = 1;
-    }
-    if (material == null) {
-      material = "dirt";
-    }
-    mesh = new THREE.Mesh(new THREE.CubeGeometry(size, size, size), game.materials.material);
-    game.materials.paint(mesh, "dirt");
-    mesh.position.set(x, y, z);
-    item = game.addItem({
-      mesh: mesh,
-      size: 1
-    });
-    return item;
-  };
+  pd = new p5.PeakDetect();
 
   i = 0;
 
   delta = 0;
+
+  theta = 0;
 
   blocks = [];
 
@@ -65,24 +74,10 @@
 
   traveller = -(length / 2);
 
-  game.on('tick', function(d) {
-    var amp, j, ref, ref1, results, x, y, z;
-    delta += d;
-    if (delta > 100) {
-      if (traveller++ > length / 2) {
-        traveller = -(length / 2);
-      }
-      delta = 0;
-    }
-    _.forEach(blocks, function(n) {
-      return game.removeItem(n);
-    });
+  pulsingHelix = function(length, amp, traveller, matter) {
+    var j, mod, ref, ref1, x, y, z;
     blocks = [];
-    amp = amplitude.getLevel();
-    i += (d / 10000) + (amp / 10);
-    results = [];
     for (x = j = ref = -(length / 2), ref1 = length / 2; ref <= ref1 ? j <= ref1 : j >= ref1; x = ref <= ref1 ? ++j : --j) {
-      amp = amplitude.getLevel();
       y = function(x, d) {
         if (d == null) {
           d = 0;
@@ -95,13 +90,65 @@
         }
         return Math.cos(x / 9 + i + d) * 10;
       };
-      if ((x + traveller) % 10 === 0) {
-        results.push(blocks.push(createMesh(x / 2, y(x), z(x) - 40, 1 + Math.floor(amp * 5))));
+      mod = (x + traveller) % 10;
+      if (mod === 0) {
+        if (amp > 1) {
+          amp = 1;
+        }
+        blocks.push(createMesh(x / 2, y(x), z(x) - 40, 1 + Math.floor(amp * 2), materials[matter]));
       } else {
-        results.push(blocks.push(createMesh(x / 2, y(x), z(x) - 40)));
+        blocks.push(createMesh(x / 2, y(x), z(x) - 40, 1, materials[matter]));
       }
     }
-    return results;
+    return blocks;
+  };
+
+  mode = 0;
+
+  matter = 0;
+
+  travelDir = 0;
+
+  game.on('tick', function(d) {
+    var amp, bass, treb, zeta;
+    delta += d;
+    theta += d;
+    zeta += d;
+    if (delta > 100) {
+      if (travelDir === 0 && traveller++ > length / 2) {
+        traveller = -(length / 2);
+      }
+      if (travelDir === 1 && traveller-- < -(length / 2)) {
+        traveller = length / 2;
+      }
+      delta = 0;
+    }
+    if (zeta > 15000) {
+      travelDir = (travelDir + 1) % 2;
+      zeta = 0;
+    }
+    if (theta > 10000) {
+      mode = (mode + 1) % 2;
+      matter = (matter + 1) % materials.length;
+      theta = 0;
+    }
+    _.forEach(blocks, function(n) {
+      return game.removeItem(n);
+    });
+    blocks = [];
+    fft.analyze();
+    bass = (fft.getEnergy("bass")) / 256;
+    treb = (fft.getEnergy("treble")) / 256;
+    amp = amplitude.getLevel();
+    i += d / 1000;
+    return blocks = (function() {
+      switch (mode) {
+        case 0:
+          return pulsingHelix(Math.ceil(length + (length * bass * 2)), treb * 2, traveller, matter);
+        case 1:
+          return pulsingHelix(Math.ceil(length * 2), bass / 2 + treb, Math.floor(traveller * 2), matter);
+      }
+    })();
   });
 
   return game;

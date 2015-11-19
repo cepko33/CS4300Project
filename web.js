@@ -40,9 +40,14 @@
 
   app.get('/main.js', browserify(__dirname + '/public/main.js'));
 
-  app.get('/lone.mp3', function(req, res) {
-    return res.sendFile(__dirname + '/public/lone.mp3');
-  });
+
+  /*
+  app.get('/*.mp3', (req, res) ->
+    res.sendFile(__dirname + '/public/*.mp3')
+  )
+   */
+
+  app.use(express["static"](__dirname + '/public'));
 
   app.get('/', function(req, res) {
     return res.render('index');
