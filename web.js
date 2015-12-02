@@ -40,13 +40,6 @@
 
   app.get('/main.js', browserify(__dirname + '/public/main.js'));
 
-
-  /*
-  app.get('/*.mp3', (req, res) ->
-    res.sendFile(__dirname + '/public/*.mp3')
-  )
-   */
-
   app.use(express["static"](__dirname + '/public'));
 
   app.get('/', function(req, res) {
