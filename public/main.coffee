@@ -24,7 +24,7 @@ createMesh = (x, y, z, size = 1, material = "grass_top") ->
   return item
 
 #materials = ["dirt", "grass_top", "leaves_opaque"]
-materials = ["#424242", "#DDDDDD", "#EEEEEE"]
+materials = ["#424242", "#D4947F", "#EEEEEE"]
 
 game = createGame(
   ###
@@ -89,12 +89,12 @@ traveller = -(length/2)
 pulsingHelix = (length, amp, traveller, wave, matter) ->
   blocks = []
 
-  lenLow = -length / 2
-  lenHigh = length / 2
+  lenLow = -length * .75
+  lenHigh = length * .75
   for x in [lenLow..lenHigh]
 
     y = (x, d = 0) ->
-      Math.sin(x/(12 / (1 + amp * .3)) + i + d) * 10
+      Math.sin(x/(12 / (1 - amp * .3)) + i + d) * 10 * Math.sin(x / 100)
     z = (x, d = 0) ->
       Math.cos(x/12 + i + d) * 10
 
@@ -102,10 +102,7 @@ pulsingHelix = (length, amp, traveller, wave, matter) ->
 
     idx = Math.floor(map_range(x, lenLow, lenHigh, 0, wave.length - 1))
     wf = Math.abs(wave[idx])
-    if 0 < mod % 10 < 4
-      blocks.push(createMesh(x/2, z(x), y(x) - 40, 0.5 + wf * 2 + Math.abs(Math.sin(mod / 8)), materials[matter]))
-    else
-      blocks.push(createMesh(x/2, z(x), y(x) - 40, 2, materials[matter]))
+    blocks.push(createMesh(x/2, z(x), y(x) - 40, 2 + wf * 2, materials[matter]))
   return blocks
 
 pulsingCube = (length, amp, traveller, matter) ->
@@ -124,7 +121,7 @@ pulsingWaveform = (length, wave, matter) ->
     blocks.push(createMesh(x/3, Math.abs(wave[idx] * 20) - 10, -40, 1.5 - Math.abs(wave[idx]), materials[matter]))
   return blocks
 
-mode = 1
+mode = 0
 bgcolor = 0
 matter = 0
 travelDir = 0
@@ -162,20 +159,23 @@ game.on 'tick', (d) ->
   color = (parseInt(background.toHex(), 16))
   game.view.renderer.setClearColorHex(color, dur / 50000)
 
-  n = new THREE.Vector3(Math.sin(cam + 8) * -0.1 , Math.sin(cam + Math.random() * .01 * bass) * -0.2, 0)
-  game.camera.rotation = n
+  if mode in [1,2]
+    rot = new THREE.Vector3(Math.sin(cam + 8) * -0.1 , Math.sin(cam + bass) * 1, 0)
+    pos = new THREE.Vector3(Math.sin(cam) * 20, 0, Math.cos(cam) * 10 + 10)
+  if mode in [0]
+    rot = new THREE.Vector3(Math.sin(cam + 8) * -0.1 , Math.sin(cam + bass / 4) * 0.2, 0)
+    pos = new THREE.Vector3(Math.sin(cam) * 10, 0, Math.cos(cam) * 10 + 10)
 
-  o = new THREE.Vector3(Math.sin(cam) * 10, 0, Math.cos(cam) * 10 + 10)
-  game.camera.position = o
 
-  ###
+  game.camera.rotation = rot
+  game.camera.position = pos
+
   if delta > 100
     if travelDir is 0 and traveller++ > length/2
       traveller =  -(length/2)
     if travelDir is 1 and traveller-- < -(length/2)
       traveller =  (length/2)
     delta = 0
-  ###
 
   if zeta > 15000
     travelDir = (travelDir + 1) % 2
@@ -195,7 +195,7 @@ game.on 'tick', (d) ->
   i += (d / 1000)
   blocks = switch mode
     when 0 then pulsingWaveform(length, wav, matter)
-    when 1 then pulsingHelix(Math.ceil(length + (length * bass * 4)), treb * 1.5, traveller, wav, matter)
+    when 1 then pulsingHelix(Math.ceil(length + (length * bass * 2)), treb, traveller, wav, matter)
     when 2 then pulsingHelix(Math.ceil(length + (length * bass * 4)), bass / 2 + treb, traveller * 2, wav, matter)
 
 return game

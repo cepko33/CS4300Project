@@ -38,7 +38,7 @@
     return item;
   };
 
-  materials = ["#424242", "#DDDDDD", "#EEEEEE"];
+  materials = ["#424242", "#D4947F", "#EEEEEE"];
 
   game = createGame({
 
@@ -111,16 +111,16 @@
   traveller = -(length / 2);
 
   pulsingHelix = function(length, amp, traveller, wave, matter) {
-    var idx, j, lenHigh, lenLow, mod, ref, ref1, ref2, wf, x, y, z;
+    var idx, j, lenHigh, lenLow, mod, ref, ref1, wf, x, y, z;
     blocks = [];
-    lenLow = -length / 2;
-    lenHigh = length / 2;
+    lenLow = -length * .75;
+    lenHigh = length * .75;
     for (x = j = ref = lenLow, ref1 = lenHigh; ref <= ref1 ? j <= ref1 : j >= ref1; x = ref <= ref1 ? ++j : --j) {
       y = function(x, d) {
         if (d == null) {
           d = 0;
         }
-        return Math.sin(x / (12 / (1 + amp * .3)) + i + d) * 10;
+        return Math.sin(x / (12 / (1 - amp * .3)) + i + d) * 10 * Math.sin(x / 100);
       };
       z = function(x, d) {
         if (d == null) {
@@ -131,11 +131,7 @@
       mod = x + traveller;
       idx = Math.floor(map_range(x, lenLow, lenHigh, 0, wave.length - 1));
       wf = Math.abs(wave[idx]);
-      if ((0 < (ref2 = mod % 10) && ref2 < 4)) {
-        blocks.push(createMesh(x / 2, z(x), y(x) - 40, 0.5 + wf * 2 + Math.abs(Math.sin(mod / 8)), materials[matter]));
-      } else {
-        blocks.push(createMesh(x / 2, z(x), y(x) - 40, 2, materials[matter]));
-      }
+      blocks.push(createMesh(x / 2, z(x), y(x) - 40, 2 + wf * 2, materials[matter]));
     }
     return blocks;
   };
@@ -157,7 +153,7 @@
     return blocks;
   };
 
-  mode = 1;
+  mode = 0;
 
   bgcolor = 0;
 
@@ -172,7 +168,7 @@
   res = grad[bgcolor].rgb(20);
 
   game.on('tick', function(d) {
-    var amp, background, bass, color, n, o, treb, wav, zeta;
+    var amp, background, bass, color, pos, rot, treb, wav, zeta;
     fft.analyze();
     bass = (fft.getEnergy("bass")) / 256;
     treb = (fft.getEnergy("treble")) / 256;
@@ -191,19 +187,25 @@
     background = res[Math.abs(Math.floor((bass - .5) * 2 * 20))];
     color = parseInt(background.toHex(), 16);
     game.view.renderer.setClearColorHex(color, dur / 50000);
-    n = new THREE.Vector3(Math.sin(cam + 8) * -0.1, Math.sin(cam + Math.random() * .01 * bass) * -0.2, 0);
-    game.camera.rotation = n;
-    o = new THREE.Vector3(Math.sin(cam) * 10, 0, Math.cos(cam) * 10 + 10);
-    game.camera.position = o;
-
-    /*
-    if delta > 100
-      if travelDir is 0 and traveller++ > length/2
-        traveller =  -(length/2)
-      if travelDir is 1 and traveller-- < -(length/2)
-        traveller =  (length/2)
-      delta = 0
-     */
+    if (mode === 1 || mode === 2) {
+      rot = new THREE.Vector3(Math.sin(cam + 8) * -0.1, Math.sin(cam + bass) * 1, 0);
+      pos = new THREE.Vector3(Math.sin(cam) * 20, 0, Math.cos(cam) * 10 + 10);
+    }
+    if (mode === 0) {
+      rot = new THREE.Vector3(Math.sin(cam + 8) * -0.1, Math.sin(cam + bass / 4) * 0.2, 0);
+      pos = new THREE.Vector3(Math.sin(cam) * 10, 0, Math.cos(cam) * 10 + 10);
+    }
+    game.camera.rotation = rot;
+    game.camera.position = pos;
+    if (delta > 100) {
+      if (travelDir === 0 && traveller++ > length / 2) {
+        traveller = -(length / 2);
+      }
+      if (travelDir === 1 && traveller-- < -(length / 2)) {
+        traveller = length / 2;
+      }
+      delta = 0;
+    }
     if (zeta > 15000) {
       travelDir = (travelDir + 1) % 2;
       zeta = 0;
@@ -223,7 +225,7 @@
         case 0:
           return pulsingWaveform(length, wav, matter);
         case 1:
-          return pulsingHelix(Math.ceil(length + (length * bass * 4)), treb * 1.5, traveller, wav, matter);
+          return pulsingHelix(Math.ceil(length + (length * bass * 2)), treb, traveller, wav, matter);
         case 2:
           return pulsingHelix(Math.ceil(length + (length * bass * 4)), bass / 2 + treb, traveller * 2, wav, matter);
       }
