@@ -1,0 +1,6 @@
+Install dependencies: `npm install`
+Also need to install a coffeescript interpreter
+
+Run with: `coffee web.coffee`
+
+
